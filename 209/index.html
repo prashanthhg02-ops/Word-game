@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101713">
+  <title>Wordsmith — A little word game</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101713;
+      --panel: #17211b;
+      --tile: #1c2821;
+      --line: #35443a;
+      --text: #f2f5ee;
+      --muted: #a2afa3;
+      --green: #a8d96c;
+      --green-ink: #17210f;
+      --yellow: #e4bd62;
+      --gray: #46534a;
+      --key: #344138;
+      --shadow: 0 24px 80px #0005;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 50% -10%, #293a2b 0, transparent 45%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-rounded, "Segoe UI", system-ui, sans-serif;
+      display: flex;
+      justify-content: center;
+    }
+
+    button { font: inherit; }
+    .app {
+      width: min(100%, 520px);
+      min-height: 100vh;
+      padding: 0 22px 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #ffffff14;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      background: var(--green);
+      color: var(--green-ink);
+      font-size: 19px;
+      font-weight: 900;
+      transform: rotate(-5deg);
+    }
+    h1 {
+      margin: 0;
+      font-size: 19px;
+      letter-spacing: -.7px;
+      font-weight: 800;
+    }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-button {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border: 1px solid #ffffff1a;
+      border-radius: 12px;
+      background: #ffffff08;
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+    }
+    .icon-button:hover { background: #ffffff15; transform: translateY(-1px); }
+    .icon-button svg { width: 18px; height: 18px; }
+
+    .intro { text-align: center; padding: 22px 0 12px; }
+    .eyebrow {
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .intro h2 { margin: 6px 0 3px; font-size: 25px; letter-spacing: -.8px; }
+    .intro p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .board {
+      width: min(100%, 328px);
+      margin: 12px auto 16px;
+      display: grid;
+      grid-template-rows: repeat(6, 1fr);
+      gap: 7px;
+    }
+    .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+    .tile {
+      aspect-ratio: 1;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      background: var(--tile);
+      display: grid;
+      place-items: center;
+      font-size: 27px;
+      font-weight: 800;
+      text-transform: uppercase;
+      transition: transform .1s, border-color .15s, background .25s;
+    }
+    .tile.filled { border-color: #849386; animation: pop .1s ease-out; }
+    .tile.correct { background: var(--green); border-color: var(--green); color: var(--green-ink); }
+    .tile.present { background: var(--yellow); border-color: var(--yellow); color: #251e0d; }
+    .tile.absent { background: var(--gray); border-color: var(--gray); color: #f4f5ef; }
+    .row.shake { animation: shake .35s; }
+    @keyframes pop { 50% { transform: scale(1.08); } }
+    @keyframes shake {
+      20%, 60% { transform: translateX(-5px); }
+      40%, 80% { transform: translateX(5px); }
+    }
+    @keyframes flip {
+      0% { transform: rotateX(0); }
+      50% { transform: rotateX(90deg); }
+      100% { transform: rotateX(0); }
+    }
+    .tile.reveal { animation: flip .45s ease both; }
+
+    .keyboard { width: 100%; margin: auto auto 0; user-select: none; }
+    .key-row { display: flex; justify-content: center; gap: 6px; margin: 0 0 8px; }
+    .key {
+      height: 52px;
+      min-width: 0;
+      flex: 1;
+      border: 0;
+      border-radius: 8px;
+      background: var(--key);
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: filter .12s, transform .12s, background .2s;
+    }
+    .key:hover { filter: brightness(1.17); }
+    .key:active { transform: scale(.95); }
+    .key.wide { flex: 1.55; font-size: 11px; }
+    .key.correct { background: #789c4d; color: #10170b; }
+    .key.present { background: #a88943; color: #1a1509; }
+    .key.absent { background: #26312a; color: #7f8b80; }
+    .keyboard-hint { text-align: center; margin: 12px 0 0; color: #718075; font-size: 10px; }
+
+    .toast {
+      position: fixed;
+      top: 86px;
+      left: 50%;
+      z-index: 5;
+      padding: 11px 17px;
+      border-radius: 10px;
+      background: #f2f5ee;
+      color: #152019;
+      font-size: 13px;
+      font-weight: 750;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -8px);
+      transition: opacity .18s, transform .18s;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      padding: 20px;
+      background: #050806b8;
+      display: grid;
+      place-items: center;
+    }
+    .overlay[hidden] { display: none; }
+    .modal {
+      width: min(100%, 390px);
+      padding: 25px;
+      border: 1px solid #ffffff1c;
+      border-radius: 20px;
+      background: #18221c;
+      box-shadow: var(--shadow);
+    }
+    .modal-top { display: flex; justify-content: space-between; align-items: center; }
+    .modal h2 { margin: 0; font-size: 21px; }
+    .modal p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .example { display: flex; gap: 6px; margin: 14px 0; }
+    .example .tile { width: 42px; font-size: 17px; border-radius: 7px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0; }
+    .stat {
+      padding: 13px 6px;
+      border: 1px solid #ffffff14;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .stat strong { display: block; font-size: 23px; }
+    .stat span { color: var(--muted); font-size: 10px; }
+    .primary-button {
+      width: 100%;
+      min-height: 46px;
+      border: 0;
+      border-radius: 11px;
+      background: var(--green);
+      color: var(--green-ink);
+      font-weight: 850;
+      cursor: pointer;
+    }
+    .primary-button:hover { filter: brightness(1.07); }
+    .modal .fine-print { margin-bottom: 0; font-size: 11px; }
+
+    @media (max-height: 700px) {
+      header { height: 64px; }
+      .intro { padding: 14px 0 5px; }
+      .board { width: min(100%, 290px); gap: 5px; margin: 8px auto 12px; }
+      .row { gap: 5px; }
+      .tile { border-radius: 8px; font-size: 24px; }
+      .key { height: 45px; }
+      .key-row { margin-bottom: 6px; }
+    }
+    @media (max-width: 380px) {
+      .app { padding-inline: 14px; }
+      .key-row { gap: 4px; }
+      .key { height: 48px; font-size: 13px; }
+      .key.wide { font-size: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">W</div>
+        <h1>wordsmith</h1>
+      </div>
+      <div class="header-actions">
+        <button class="icon-button" id="stats-button" aria-label="View your stats" title="Stats">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5M4 19h17"/><path d="m7 15 4-4 3 2 6-7"/></svg>
+        </button>
+        <button class="icon-button" id="help-button" aria-label="How to play" title="How to play">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.2-1.8 2.7M12 17h.01"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="intro" aria-label="Game introduction">
+      <div class="eyebrow">A fresh little challenge</div>
+      <h2>Find the hidden word</h2>
+      <p>Six tries. Five letters. How sharp is your word sense?</p>
+    </section>
+
+    <section class="board" id="board" role="grid" aria-label="Guess board"></section>
+    <section class="keyboard" id="keyboard" aria-label="On-screen keyboard"></section>
+    <p class="keyboard-hint">TYPE TO PLAY <span aria-hidden="true">·</span> ENTER TO GUESS <span aria-hidden="true">·</span> BACKSPACE TO ERASE</p>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="overlay" id="overlay" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-top">
+        <h2 id="modal-title">How to play</h2>
+        <button class="icon-button" id="close-modal" aria-label="Close dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <div id="modal-content">
+        <p>Guess the hidden five-letter word in six tries. After each guess, the tiles reveal how close you are.</p>
+        <div class="example" aria-label="Example: W is in the right place, O is in the word but the wrong place, R is not in the word">
+          <div class="tile correct">W</div><div class="tile present">O</div><div class="tile absent">R</div>
+        </div>
+        <p><strong style="color:var(--text)">Green</strong> means right letter, right spot. <strong style="color:var(--text)">Gold</strong> means right letter, wrong spot. Muted means it’s not in the word.</p>
+        <p class="fine-print">Words are chosen at random, so every new game is a fresh puzzle.</p>
+      </div>
+      <button class="primary-button" id="modal-action" hidden>Play again</button>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      const WORDS = [
+        "apple", "beach", "brave", "bread", "brick", "bring", "charm", "chess",
+        "cloud", "dance", "dream", "earth", "flame", "flour", "frame", "fresh",
+        "fruit", "giant", "grace", "grape", "green", "happy", "heart", "honey",
+        "house", "irony", "juice", "knock", "laugh", "lemon", "light", "magic",
+        "maple", "melon", "metal", "money", "music", "night", "ocean", "olive",
+        "paint", "peace", "pearl", "piano", "plant", "pride", "queen", "quiet",
+        "radio", "river", "robin", "round", "salad", "scale", "shine", "smile",
+        "snack", "solar", "spice", "spoon", "stars", "stone", "storm", "sugar",
+        "table", "tiger", "toast", "trust", "under", "value", "video", "voice",
+        "water", "whale", "wheat", "world", "youth", "zebra"
+      ];
+      const ROWS = 6;
+      const COLS = 5;
+      const KEY_ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
+      const board = document.getElementById("board");
+      const keyboard = document.getElementById("keyboard");
+      const toast = document.getElementById("toast");
+      const overlay = document.getElementById("overlay");
+      const modalTitle = document.getElementById("modal-title");
+      const modalContent = document.getElementById("modal-content");
+      const modalAction = document.getElementById("modal-action");
+      const keyElements = new Map();
+      const keyboardStatus = new Map();
+      let answer;
+      let currentRow;
+      let currentGuess;
+      let gameOver;
+      let toastTimer;
+
+      function buildBoard() {
+        board.replaceChildren();
+        for (let row = 0; row < ROWS; row += 1) {
+          const rowElement = document.createElement("div");
+          rowElement.className = "row";
+          rowElement.setAttribute("role", "row");
+          for (let col = 0; col < COLS; col += 1) {
+            const tile = document.createElement("div");
+            tile.className = "tile";
+            tile.setAttribute("role", "gridcell");
+            tile.setAttribute("aria-label", `Row ${row + 1}, letter ${col + 1}`);
+            rowElement.append(tile);
+          }
+          board.append(rowElement);
+        }
+      }
+
+      function buildKeyboard() {
+        keyboard.replaceChildren();
+        keyElements.clear();
+        KEY_ROWS.forEach((letters, rowIndex) => {
+          const row = document.createElement("div");
+          row.className = "key-row";
+          if (rowIndex === 2) addKey(row, "ENTER", "wide");
+          for (const letter of letters) addKey(row, letter, "");
+          if (rowIndex === 2) addKey(row, "⌫", "wide");
+          keyboard.append(row);
+        });
+      }
+
+      function addKey(row, value, extraClass) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `key ${extraClass}`.trim();
+        button.textContent = value;
+        button.setAttribute("aria-label", value === "⌫" ? "Backspace" : value);
+        button.addEventListener("click", () => handleKey(value));
+        row.append(button);
+        if (value.length === 1 && /^[A-Z]$/.test(value)) keyElements.set(value, button);
+      }
+
+      function newGame() {
+        answer = WORDS[Math.floor(Math.random() * WORDS.length)].toUpperCase();
+        currentRow = 0;
+        currentGuess = "";
+        gameOver = false;
+        keyboardStatus.clear();
+        keyElements.forEach((key) => { key.className = "key"; });
+        buildBoard();
+        hideModal();
+      }
+
+      function paintCurrentGuess() {
+        const tiles = board.children[currentRow].children;
+        for (let i = 0; i < COLS; i += 1) {
+          const tile = tiles[i];
+          tile.textContent = currentGuess[i] || "";
+          tile.classList.toggle("filled", Boolean(currentGuess[i]));
+        }
+      }
+
+      function handleKey(key) {
+        if (gameOver || !overlay.hidden) return;
+        if (key === "ENTER") {
+          submitGuess();
+        } else if (key === "⌫" || key === "BACKSPACE") {
+          currentGuess = currentGuess.slice(0, -1);
+          paintCurrentGuess();
+        } else if (/^[A-Z]$/.test(key) && currentGuess.length < COLS) {
+          currentGuess += key;
+          paintCurrentGuess();
+        }
+      }
+
+      function submitGuess() {
+        if (currentGuess.length !== COLS) {
+          showToast("Not enough letters");
+          shakeRow();
+          return;
+        }
+
+        const guess = currentGuess;
+        const result = Array(COLS).fill("absent");
+        const remaining = answer.split("");
+
+        for (let i = 0; i < COLS; i += 1) {
+          if (guess[i] === answer[i]) {
+            result[i] = "correct";
+            remaining[i] = "";
+          }
+        }
+        for (let i = 0; i < COLS; i += 1) {
+          if (result[i] !== "correct") {
+            const match = remaining.indexOf(guess[i]);
+            if (match !== -1) {
+              result[i] = "present";
+              remaining[match] = "";
+            }
+          }
+        }
+
+        const rowElement = board.children[currentRow];
+        const tiles = rowElement.children;
+        result.forEach((status, index) => {
+          const tile = tiles[index];
+          window.setTimeout(() => {
+            tile.classList.add("reveal", status);
+            tile.setAttribute("aria-label", `${guess[index]}, ${status}`);
+          }, index * 220);
+          const previous = keyboardStatus.get(guess[index]);
+          if (!previous || status === "correct" || (status === "present" && previous === "absent")) {
+            keyboardStatus.set(guess[index], status);
+          }
+        });
+        window.setTimeout(updateKeyboard, COLS * 220);
+        currentRow += 1;
+        currentGuess = "";
+
+        const won = guess === answer;
+        if (won || currentRow === ROWS) {
+          gameOver = true;
+          const record = getStats();
+          record.played += 1;
+          if (won) {
+            record.wins += 1;
+            record.streak += 1;
+            record.lastResult = `Solved in ${currentRow} ${currentRow === 1 ? "try" : "tries"}`;
+          } else {
+            record.streak = 0;
+            record.lastResult = `The word was ${answer}`;
+          }
+          saveStats(record);
+          window.setTimeout(() => showResult(won), COLS * 220 + 320);
+        }
+      }
+
+      function updateKeyboard() {
+        keyboardStatus.forEach((status, letter) => {
+          const key = keyElements.get(letter);
+          if (key) key.className = `key ${status}`;
+        });
+      }
+
+      function shakeRow() {
+        const row = board.children[currentRow];
+        row.classList.remove("shake");
+        void row.offsetWidth;
+        row.classList.add("shake");
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => toast.classList.remove("show"), 1500);
+      }
+
+      function getStats() {
+        try {
+          const saved = JSON.parse(localStorage.getItem("wordsmith-stats") || "{}");
+          return {
+            played: Number(saved.played) || 0,
+            wins: Number(saved.wins) || 0,
+            streak: Number(saved.streak) || 0,
+            lastResult: typeof saved.lastResult === "string" ? saved.lastResult : ""
+          };
+        } catch (error) {
+          console.error("Could not read game stats from local storage.", error);
+          return { played: 0, wins: 0, streak: 0, lastResult: "" };
+        }
+      }
+
+      function saveStats(stats) {
+        try {
+          localStorage.setItem("wordsmith-stats", JSON.stringify(stats));
+        } catch (error) {
+          console.error("Could not save game stats to local storage.", error);
+        }
+      }
+
+      function showHelp() {
+        modalTitle.textContent = "How to play";
+        modalContent.hidden = false;
+        modalAction.hidden = true;
+        overlay.hidden = false;
+      }
+
+      function showResult(won) {
+        modalTitle.textContent = won ? "Beautifully done!" : "Good try!";
+        modalContent.hidden = false;
+        const stats = getStats();
+        modalContent.innerHTML = `
+          <p>${won ? `You found <strong style="color:var(--green)">${answer}</strong> in ${currentRow} ${currentRow === 1 ? "guess" : "guesses"}.` : `The word was <strong style="color:var(--green)">${answer}</strong>. There’s always another one.`}</p>
+          <div class="stats">
+            <div class="stat"><strong>${stats.played}</strong><span>GAMES</span></div>
+            <div class="stat"><strong>${stats.played ? Math.round(stats.wins / stats.played * 100) : 0}%</strong><span>WIN RATE</span></div>
+            <div class="stat"><strong>${stats.streak}</strong><span>STREAK</span></div>
+          </div>`;
+        const lastResult = document.createElement("p");
+        lastResult.className = "fine-print";
+        lastResult.textContent = stats.lastResult;
+        modalContent.append(lastResult);
+        modalAction.hidden = false;
+        overlay.hidden = false;
+      }
+
+      function showStats() {
+        modalTitle.textContent = "Your stats";
+        modalContent.hidden = false;
+        const stats = getStats();
+        modalContent.innerHTML = `
+          <p>A little snapshot of your wordsmithing.</p>
+          <div class="stats">
+            <div class="stat"><strong>${stats.played}</strong><span>GAMES</span></div>
+            <div class="stat"><strong>${stats.played ? Math.round(stats.wins / stats.played * 100) : 0}%</strong><span>WIN RATE</span></div>
+            <div class="stat"><strong>${stats.streak}</strong><span>STREAK</span></div>
+          </div>`;
+        const lastResult = document.createElement("p");
+        lastResult.className = "fine-print";
+        lastResult.textContent = stats.lastResult
+          ? `Last game: ${stats.lastResult}`
+          : "Play your first game to start your stats.";
+        modalContent.append(lastResult);
+        modalAction.hidden = true;
+        overlay.hidden = false;
+      }
+
+      function hideModal() {
+        overlay.hidden = true;
+      }
+
+      document.addEventListener("keydown", (event) => {
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (event.key === "Escape") {
+          hideModal();
+          return;
+        }
+        if (event.key === "Enter") handleKey("ENTER");
+        else if (event.key === "Backspace") handleKey("BACKSPACE");
+        else if (/^[a-zA-Z]$/.test(event.key)) handleKey(event.key.toUpperCase());
+      });
+      document.getElementById("help-button").addEventListener("click", showHelp);
+      document.getElementById("stats-button").addEventListener("click", showStats);
+      document.getElementById("close-modal").addEventListener("click", hideModal);
+      document.getElementById("modal-action").addEventListener("click", newGame);
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) hideModal();
+      });
+
+      buildKeyboard();
+      newGame();
+    })();
+  </script>
+</body>
+</html>
